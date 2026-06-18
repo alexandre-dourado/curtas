@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Curtas - Galeria</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🎞️</text></svg>">
     <style>
         :root {
             --bg: #ffffff;
@@ -163,13 +164,25 @@
             text-transform: uppercase;
             letter-spacing: -0.02em;
             transition: background 0.2s;
-            pointer-events: none; /* Allows clicking the item through the label */
+            pointer-events: none;
             word-break: break-word;
             text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            z-index: 5;
         }
 
         .item:hover .item-info {
             background: rgba(0,0,0,0.2);
+        }
+
+        .video-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            color: rgba(255, 255, 255, 0.8);
+            z-index: 2;
+            pointer-events: none;
         }
 
         .category-tag {
@@ -182,7 +195,7 @@
             text-transform: uppercase;
             color: white;
             border-radius: 2px;
-            z-index: 5;
+            z-index: 10;
         }
 
         /* Modal */
@@ -297,7 +310,6 @@
         let filesData = [];
         const categoryColors = {};
 
-        // Helper to generate a consistent color for a string
         function stringToColor(str) {
             if (categoryColors[str]) return categoryColors[str];
             let hash = 0;
@@ -331,16 +343,9 @@
         async function fetchFiles() {
             try {
                 const res = await fetch(`https://api.github.com/repos/${CONFIG.username}/${CONFIG.repo}/git/trees/${CONFIG.branch}?recursive=1`);
-                
-                if (res.status === 404) {
-                    throw new Error("Repositório não encontrado ou ainda não publicado no GitHub.");
-                }
-
+                if (res.status === 404) throw new Error("Repositório não encontrado ou privado.");
                 const data = await res.json();
-                
-                if (!data.tree) {
-                    throw new Error("Nenhum arquivo encontrado no repositório.");
-                }
+                if (!data.tree) throw new Error("Nenhum arquivo encontrado.");
 
                 filesData = data.tree.filter(item => 
                     item.type === 'blob' && item.path.startsWith(CONFIG.basePath + '/')
@@ -353,23 +358,11 @@
                     const ext = filename.split('.').pop().toLowerCase();
                     const rawUrl = `https://raw.githubusercontent.com/${CONFIG.username}/${CONFIG.repo}/${CONFIG.branch}/${item.path}`;
 
-                    return {
-                        path: item.path,
-                        filename,
-                        name,
-                        category,
-                        ext,
-                        rawUrl
-                    };
+                    return { path: item.path, filename, name, category, ext, rawUrl };
                 });
             } catch (e) {
-                console.error("Error fetching files from GitHub API", e);
-                gallery.innerHTML = `
-                    <div style="padding:40px; text-align:center; font-size:0.9rem; opacity:0.7;">
-                        <p>${e.message}</p>
-                        <p style="margin-top:10px; font-size:0.7rem;">Certifique-se de que o repositório <b>${CONFIG.username}/${CONFIG.repo}</b> existe e é <b>público</b>.</p>
-                    </div>
-                `;
+                console.error(e);
+                gallery.innerHTML = `<div style="padding:40px; text-align:center;">${e.message}</div>`;
             }
         }
 
@@ -378,24 +371,25 @@
                 let mediaHtml = '';
                 const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.ext);
                 const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(file.ext);
-                const isText = ['txt', 'md'].includes(file.ext);
 
-                if (isImage) {
-                    mediaHtml = `<img src="${file.rawUrl}" loading="lazy" alt="${file.name}">`;
-                } else if (isVideo) {
-                    mediaHtml = `<video src="${file.rawUrl}#t=0.1" preload="metadata"></video>`;
+                if (isImage || isVideo) {
+                    const thumbPath = file.path.replace(CONFIG.basePath + '/', 'thumbs/');
+                    const thumbName = thumbPath.substring(0, thumbPath.lastIndexOf('.')) + '.webp';
+                    const thumbUrl = `https://raw.githubusercontent.com/${CONFIG.username}/${CONFIG.repo}/${CONFIG.branch}/${thumbName}`;
+                    const fallbackUrl = isVideo ? `${file.rawUrl}#t=0.1` : file.rawUrl;
+                    
+                    mediaHtml = `<img src="${thumbUrl}" onerror="this.onerror=null; this.src='${fallbackUrl}';" loading="lazy">`;
+                    if (isVideo) mediaHtml += `<div class="video-icon">▶</div>`;
                 } else {
                     mediaHtml = `<div class="placeholder">${file.ext.toUpperCase()}<br>${file.name}</div>`;
                 }
 
-                const catTag = file.category ? 
-                    `<span class="category-tag" style="background:${stringToColor(file.category)}">${file.category}</span>` : '';
+                const catTag = file.category ? `<span class="category-tag" style="background:${stringToColor(file.category)}">${file.category}</span>` : '';
 
                 return `
                     <div class="item ${isVideo ? 'is-video' : ''}" onclick="openModal('${file.path}')">
                         ${catTag}
                         ${mediaHtml}
-                        <div class="video-icon">▶</div>
                         <div class="item-info">${file.name}</div>
                     </div>
                 `;
@@ -407,12 +401,9 @@
             if (!file) return;
 
             modalContent.innerHTML = '';
-            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.ext);
-            const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(file.ext);
-
-            if (isImage) {
+            if (['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.ext)) {
                 modalContent.innerHTML = `<img src="${file.rawUrl}">`;
-            } else if (isVideo) {
+            } else if (['mp4', 'webm', 'ogg', 'mov'].includes(file.ext)) {
                 modalContent.innerHTML = `<video src="${file.rawUrl}" controls autoplay></video>`;
             } else {
                 fetch(file.rawUrl).then(r => r.text()).then(text => {
@@ -435,66 +426,27 @@
 
         document.querySelector('.close-modal').onclick = () => {
             modal.classList.remove('active');
-            modalContent.innerHTML = ''; // Stop videos
+            modalContent.innerHTML = '';
             document.body.style.overflow = 'auto';
         };
 
-        // Zoom Logic
-        document.getElementById('zoom-in').onclick = () => {
-            currentGridSize = Math.max(100, currentGridSize - 40);
-            updateGrid();
-        };
-        document.getElementById('zoom-out').onclick = () => {
-            currentGridSize = Math.min(500, currentGridSize + 40);
-            updateGrid();
-        };
+        document.getElementById('zoom-in').onclick = () => { currentGridSize = Math.max(100, currentGridSize - 40); updateGrid(); };
+        document.getElementById('zoom-out').onclick = () => { currentGridSize = Math.min(500, currentGridSize + 40); updateGrid(); };
+        function updateGrid() { document.documentElement.style.setProperty('--grid-size', currentGridSize + 'px'); }
 
-        function updateGrid() {
-            document.documentElement.style.setProperty('--grid-size', currentGridSize + 'px');
-        }
-
-        // Links Menu Toggle
-        document.getElementById('menu-btn').onclick = (e) => {
-            e.stopPropagation();
-            linksMenu.classList.toggle('active');
-        };
-
+        document.getElementById('menu-btn').onclick = (e) => { e.stopPropagation(); document.getElementById('links-menu').classList.toggle('active'); };
         window.onclick = (e) => {
-            if (!e.target.closest('.menu-container')) {
-                linksMenu.classList.remove('active');
-            }
-            if (e.target === modal) {
-                modal.classList.remove('active');
-                modalContent.innerHTML = '';
-                document.body.style.overflow = 'auto';
-            }
+            if (!e.target.closest('.menu-container')) document.getElementById('links-menu').classList.remove('active');
+            if (e.target === modal) { modal.classList.remove('active'); modalContent.innerHTML = ''; document.body.style.overflow = 'auto'; }
         };
 
-        // Theme Toggle
         themeToggle.onclick = () => {
-            const current = document.body.getAttribute('data-theme');
-            const next = current === 'dark' ? 'light' : 'dark';
+            const next = document.body.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
             document.body.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
         };
 
-        function loadTheme() {
-            const saved = localStorage.getItem('theme') || 'light';
-            document.body.setAttribute('data-theme', saved);
-        }
-
-        init();
-    </script>
-</body>
-</html>
-e('data-theme', next);
-            localStorage.setItem('theme', next);
-        };
-
-        function loadTheme() {
-            const saved = localStorage.getItem('theme') || 'light';
-            document.body.setAttribute('data-theme', saved);
-        }
+        function loadTheme() { document.body.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); }
 
         init();
     </script>
