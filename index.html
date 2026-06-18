@@ -392,9 +392,10 @@
                     `<span class="category-tag" style="background:${stringToColor(file.category)}">${file.category}</span>` : '';
 
                 return `
-                    <div class="item" onclick="openModal('${file.path}')">
+                    <div class="item ${isVideo ? 'is-video' : ''}" onclick="openModal('${file.path}')">
                         ${catTag}
                         ${mediaHtml}
+                        <div class="video-icon">▶</div>
                         <div class="item-info">${file.name}</div>
                     </div>
                 `;
@@ -474,6 +475,19 @@
             const current = document.body.getAttribute('data-theme');
             const next = current === 'dark' ? 'light' : 'dark';
             document.body.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        };
+
+        function loadTheme() {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', saved);
+        }
+
+        init();
+    </script>
+</body>
+</html>
+e('data-theme', next);
             localStorage.setItem('theme', next);
         };
 
