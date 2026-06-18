@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curtas - Galeria</title>
+    <style>
+        :root {
+            --bg: #ffffff;
+            --text: #000000;
+            --border: #eeeeee;
+            --accent: #007bff;
+            --font: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+            --grid-size: 200px;
+            --gap: 4px;
+        }
+
+        [data-theme="dark"] {
+            --bg: #000000;
+            --text: #ffffff;
+            --border: #333333;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: var(--font);
+            transition: background 0.3s, color 0.3s;
+            overflow-x: hidden;
+        }
+
+        header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            background: var(--bg);
+            z-index: 100;
+        }
+
+        .title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        button {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        button:hover {
+            background: var(--text);
+            color: var(--bg);
+        }
+
+        .menu-container {
+            position: relative;
+        }
+
+        #links-menu {
+            display: none;
+            position: absolute;
+            right: 0;
+            top: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            list-style: none;
+            min-width: 200px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        #links-menu.active {
+            display: block;
+        }
+
+        #links-menu li a {
+            display: block;
+            padding: 10px 15px;
+            text-decoration: none;
+            color: var(--text);
+            font-size: 0.85rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        #links-menu li a:hover {
+            background: var(--border);
+        }
+
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(var(--grid-size), 1fr));
+            gap: var(--gap);
+            padding: var(--gap);
+        }
+
+        .item {
+            position: relative;
+            aspect-ratio: 1;
+            overflow: hidden;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .item img, .item video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: opacity 0.2s;
+        }
+
+        .item .placeholder {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            background: var(--border);
+            text-align: center;
+            padding: 10px;
+        }
+
+        .item-info {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            padding: 4px 8px;
+            font-size: 0.65rem;
+            opacity: 0;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .item:hover .item-info {
+            opacity: 1;
+        }
+
+        .category-tag {
+            position: absolute;
+            top: 5px;
+            left: 5px;
+            padding: 2px 6px;
+            font-size: 0.55rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: white;
+            border-radius: 2px;
+            z-index: 5;
+        }
+
+        /* Modal */
+        #modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            z-index: 1000;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modal.active {
+            display: flex;
+        }
+
+        #modal-content {
+            max-width: 90%;
+            max-height: 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        #modal-content img, #modal-content video {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        #modal-text {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            padding: 40px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 0.9rem;
+            border: 1px solid var(--border);
+        }
+
+        .modal-controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 20px;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+
+        /* Mobile adjustments */
+        @media (max-width: 600px) {
+            :root {
+                --grid-size: 140px;
+            }
+            .title { font-size: 1rem; }
+            button { padding: 6px 8px; font-size: 0.7rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="title">Curtas</div>
+        <div class="controls">
+            <button id="zoom-out">-</button>
+            <button id="zoom-in">+</button>
+            <button id="theme-toggle">Theme</button>
+            <div class="menu-container">
+                <button id="menu-btn">Links</button>
+                <ul id="links-menu"></ul>
+            </div>
+        </div>
+    </header>
+
+    <div class="gallery" id="gallery"></div>
+
+    <div id="modal">
+        <span class="close-modal">&times;</span>
+        <div id="modal-content"></div>
+        <div class="modal-controls">
+            <button id="download-btn">Download</button>
+        </div>
+    </div>
+
+    <script>
+        const CONFIG = {
+            username: 'alexandre-dourado',
+            repo: 'curtas',
+            branch: 'main',
+            basePath: 'files'
+        };
+
+        const gallery = document.getElementById('gallery');
+        const linksMenu = document.getElementById('links-menu');
+        const modal = document.getElementById('modal');
+        const modalContent = document.getElementById('modal-content');
+        const downloadBtn = document.getElementById('download-btn');
+        const themeToggle = document.getElementById('theme-toggle');
+
+        let currentGridSize = 200;
+        let filesData = [];
+        const categoryColors = {};
+
+        // Helper to generate a consistent color for a string
+        function stringToColor(str) {
+            if (categoryColors[str]) return categoryColors[str];
+            let hash = 0;
+            for (let i = 0; i < str.length; i++) {
+                hash = str.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = Math.abs(hash % 360);
+            categoryColors[str] = `hsl(${h}, 60%, 40%)`;
+            return categoryColors[str];
+        }
+
+        async function init() {
+            loadTheme();
+            fetchLinks();
+            await fetchFiles();
+            renderGallery();
+        }
+
+        async function fetchLinks() {
+            try {
+                const res = await fetch('links.json');
+                const links = await res.json();
+                linksMenu.innerHTML = links.map(link => 
+                    `<li><a href="${link.url}" target="_blank">${link.label}</a></li>`
+                ).join('');
+            } catch (e) {
+                console.error("Error loading links.json", e);
+            }
+        }
+
+        async function fetchFiles() {
+            try {
+                // Use git/trees API for recursive file listing
+                const res = await fetch(`https://api.github.com/repos/${CONFIG.username}/${CONFIG.repo}/git/trees/${CONFIG.branch}?recursive=1`);
+                const data = await res.json();
+                
+                filesData = data.tree.filter(item => 
+                    item.type === 'blob' && item.path.startsWith(CONFIG.basePath + '/')
+                ).map(item => {
+                    const relativePath = item.path.replace(CONFIG.basePath + '/', '');
+                    const pathParts = relativePath.split('/');
+                    const filename = pathParts.pop();
+                    const category = pathParts.length > 0 ? pathParts[0] : null;
+                    const name = filename.substring(0, filename.lastIndexOf('.')) || filename;
+                    const ext = filename.split('.').pop().toLowerCase();
+                    const rawUrl = `https://raw.githubusercontent.com/${CONFIG.username}/${CONFIG.repo}/${CONFIG.branch}/${item.path}`;
+
+                    return {
+                        path: item.path,
+                        filename,
+                        name,
+                        category,
+                        ext,
+                        rawUrl
+                    };
+                });
+            } catch (e) {
+                console.error("Error fetching files from GitHub API", e);
+                // Fallback or error message
+                gallery.innerHTML = '<div style="padding:20px">Error loading files. Ensure repo is public and path exists.</div>';
+            }
+        }
+
+        function renderGallery() {
+            gallery.innerHTML = filesData.map(file => {
+                let mediaHtml = '';
+                const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.ext);
+                const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(file.ext);
+                const isText = ['txt', 'md'].includes(file.ext);
+
+                if (isImage) {
+                    mediaHtml = `<img src="${file.rawUrl}" loading="lazy" alt="${file.name}">`;
+                } else if (isVideo) {
+                    mediaHtml = `<video src="${file.rawUrl}#t=0.1" preload="metadata"></video>`;
+                } else {
+                    mediaHtml = `<div class="placeholder">${file.ext.toUpperCase()}<br>${file.name}</div>`;
+                }
+
+                const catTag = file.category ? 
+                    `<span class="category-tag" style="background:${stringToColor(file.category)}">${file.category}</span>` : '';
+
+                return `
+                    <div class="item" onclick="openModal('${file.path}')">
+                        ${catTag}
+                        ${mediaHtml}
+                        <div class="item-info">${file.name}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        window.openModal = (path) => {
+            const file = filesData.find(f => f.path === path);
+            if (!file) return;
+
+            modalContent.innerHTML = '';
+            const isImage = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].includes(file.ext);
+            const isVideo = ['mp4', 'webm', 'ogg', 'mov'].includes(file.ext);
+
+            if (isImage) {
+                modalContent.innerHTML = `<img src="${file.rawUrl}">`;
+            } else if (isVideo) {
+                modalContent.innerHTML = `<video src="${file.rawUrl}" controls autoplay></video>`;
+            } else {
+                fetch(file.rawUrl).then(r => r.text()).then(text => {
+                    modalContent.innerHTML = `<div id="modal-text">${text}</div>`;
+                });
+            }
+
+            downloadBtn.onclick = () => {
+                const a = document.createElement('a');
+                a.href = file.rawUrl;
+                a.download = file.filename;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            };
+
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        };
+
+        document.querySelector('.close-modal').onclick = () => {
+            modal.classList.remove('active');
+            modalContent.innerHTML = ''; // Stop videos
+            document.body.style.overflow = 'auto';
+        };
+
+        // Zoom Logic
+        document.getElementById('zoom-in').onclick = () => {
+            currentGridSize = Math.max(100, currentGridSize - 40);
+            updateGrid();
+        };
+        document.getElementById('zoom-out').onclick = () => {
+            currentGridSize = Math.min(500, currentGridSize + 40);
+            updateGrid();
+        };
+
+        function updateGrid() {
+            document.documentElement.style.setProperty('--grid-size', currentGridSize + 'px');
+        }
+
+        // Links Menu Toggle
+        document.getElementById('menu-btn').onclick = (e) => {
+            e.stopPropagation();
+            linksMenu.classList.toggle('active');
+        };
+
+        window.onclick = (e) => {
+            if (!e.target.closest('.menu-container')) {
+                linksMenu.classList.remove('active');
+            }
+            if (e.target === modal) {
+                modal.classList.remove('active');
+                modalContent.innerHTML = '';
+                document.body.style.overflow = 'auto';
+            }
+        };
+
+        // Theme Toggle
+        themeToggle.onclick = () => {
+            const current = document.body.getAttribute('data-theme');
+            const next = current === 'dark' ? 'light' : 'dark';
+            document.body.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+        };
+
+        function loadTheme() {
+            const saved = localStorage.getItem('theme') || 'light';
+            document.body.setAttribute('data-theme', saved);
+        }
+
+        init();
+    </script>
+</body>
+</html>
