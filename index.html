@@ -147,22 +147,29 @@
 
         .item-info {
             position: absolute;
-            bottom: 0;
+            top: 0;
             left: 0;
             right: 0;
-            background: rgba(0,0,0,0.6);
+            bottom: 0;
+            background: rgba(0,0,0,0.4);
             color: white;
-            padding: 4px 8px;
-            font-size: 0.65rem;
-            opacity: 0;
-            transition: opacity 0.2s;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            padding: 10px;
+            font-size: 1.2rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: -0.02em;
+            transition: background 0.2s;
+            pointer-events: none; /* Allows clicking the item through the label */
+            word-break: break-word;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
         }
 
         .item:hover .item-info {
-            opacity: 1;
+            background: rgba(0,0,0,0.2);
         }
 
         .category-tag {
@@ -323,10 +330,18 @@
 
         async function fetchFiles() {
             try {
-                // Use git/trees API for recursive file listing
                 const res = await fetch(`https://api.github.com/repos/${CONFIG.username}/${CONFIG.repo}/git/trees/${CONFIG.branch}?recursive=1`);
+                
+                if (res.status === 404) {
+                    throw new Error("Repositório não encontrado ou ainda não publicado no GitHub.");
+                }
+
                 const data = await res.json();
                 
+                if (!data.tree) {
+                    throw new Error("Nenhum arquivo encontrado no repositório.");
+                }
+
                 filesData = data.tree.filter(item => 
                     item.type === 'blob' && item.path.startsWith(CONFIG.basePath + '/')
                 ).map(item => {
@@ -349,8 +364,12 @@
                 });
             } catch (e) {
                 console.error("Error fetching files from GitHub API", e);
-                // Fallback or error message
-                gallery.innerHTML = '<div style="padding:20px">Error loading files. Ensure repo is public and path exists.</div>';
+                gallery.innerHTML = `
+                    <div style="padding:40px; text-align:center; font-size:0.9rem; opacity:0.7;">
+                        <p>${e.message}</p>
+                        <p style="margin-top:10px; font-size:0.7rem;">Certifique-se de que o repositório <b>${CONFIG.username}/${CONFIG.repo}</b> existe e é <b>público</b>.</p>
+                    </div>
+                `;
             }
         }
 
